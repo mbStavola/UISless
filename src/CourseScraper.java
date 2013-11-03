@@ -16,6 +16,8 @@ import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.html.HtmlPasswordInput;
 import com.gargoylesoftware.htmlunit.html.HtmlSelect;
 import com.gargoylesoftware.htmlunit.html.HtmlSubmitInput;
+import com.gargoylesoftware.htmlunit.html.HtmlTable;
+import com.gargoylesoftware.htmlunit.html.HtmlTableRow;
 
 
 public class CourseScraper {
@@ -44,13 +46,25 @@ public class CourseScraper {
 	public Object clone() throws CloneNotSupportedException {throw new CloneNotSupportedException();}
 	// END SINGLETON
 	
+	
+	
 	public static void main(String[] args) throws Exception {
-		getCourseScraper().openCoursePage();
-		
-		// Pull the 20th row, then pull the 6th cell in that row (these are just random test values), and then get the text that that cell contains
-		System.out.println(getCourseScraper().coursePageDoj.get("tr", 19).get("td", 5).text()); // This shit does not do what I want it to do yet
+		getCourseScraper().openCoursePage(); // Get to the page we actually need
 		
 		
+		// Get the table containing every class, and then store all of its rows into a List
+		final HtmlTable coursePageTable = (HtmlTable) getCourseScraper().coursePage.getByXPath("//table[@class='datadisplaytable']").get(0);
+		List<HtmlTableRow> coursePageTableRows = coursePageTable.getRows();
+		
+		
+		// Pull the 21st to 31st rows from that list, and then pull the first 6 columns of those rows (just as an example)
+		for (int i = 20; i < 30; i++) {
+			for (int j = 0; j < 15; j++) {
+				System.out.print(coursePageTableRows.get(i).getCell(j).getTextContent());
+				System.out.print("\t");
+			}
+			System.out.println();
+		}
 		
 		getCourseScraper().webClient.closeAllWindows();
 	}
