@@ -1,9 +1,16 @@
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.Arrays;
+import java.util.List;
+
 import javax.swing.JOptionPane;
+
+import be.roam.hue.doj.Doj;
+
 import com.gargoylesoftware.htmlunit.BrowserVersion;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.html.HtmlPasswordInput;
@@ -11,7 +18,7 @@ import com.gargoylesoftware.htmlunit.html.HtmlSelect;
 import com.gargoylesoftware.htmlunit.html.HtmlSubmitInput;
 
 
-public class Test {
+public class CourseScraper {
 
 	/**
 	 * @author Kevin Most
@@ -20,19 +27,44 @@ public class Test {
 	 * @throws FailingHttpStatusCodeException 
 	 * @dateCreated Nov 3, 2013
 	 */
+	
+	private final WebClient webClient = new WebClient(BrowserVersion.FIREFOX_17); // The entire webclient
+	private HtmlPage coursePage; // The page that lists every single course and its free seats, professor, date/time, etc.
+	private Doj coursePageDoj = Doj.on(coursePage); // Doj allows us to traverse the DOM in the coursePage
+	
+	// START SINGLETON
+	private static CourseScraper instance;
+	private CourseScraper() {}
+	public static synchronized CourseScraper getCourseScraper() {
+		if (instance == null) {
+			instance = new CourseScraper();
+		}
+		return instance;
+	}
+	public Object clone() throws CloneNotSupportedException {throw new CloneNotSupportedException();}
+	// END SINGLETON
+	
 	public static void main(String[] args) throws Exception {
-		// TODO Auto-generated method stub
+		getCourseScraper().openCoursePage();
 		
-		final WebClient webClient = new WebClient(BrowserVersion.FIREFOX_17);
+		// Pull the 20th row, then pull the 6th cell in that row (these are just random test values), and then get the text that that cell contains
+		System.out.println(getCourseScraper().coursePageDoj.get("tr", 19).get("td", 5).text()); // This shit does not do what I want it to do yet
 		
+		
+		
+		getCourseScraper().webClient.closeAllWindows();
+	}
+
+	
+	public void openCoursePage() throws FailingHttpStatusCodeException, MalformedURLException, IOException {
 		// Get the login form, and then gets the submit button, user ID, and password fields from the form
-		final HtmlPage loginPage = webClient.getPage("http://apollo.stjohns.edu");				
+		final HtmlPage loginPage = webClient.getPage("http://apollo.stjohns.edu");
 		final HtmlForm form = loginPage.getFormByName("loginform");
 		final HtmlSubmitInput submitButton = form.getInputByValue("Login");
 		final HtmlPasswordInput userid = form.getInputByName("sid");
 		final HtmlPasswordInput password = form.getInputByName("PIN");
-		// Log into UIS
 		
+		// Log into UIS
 		userid.setValueAttribute(JOptionPane.showInputDialog("Enter your X Number"));
 		password.setValueAttribute(JOptionPane.showInputDialog("Enter your PIN"));
 		
@@ -73,10 +105,6 @@ public class Test {
 		for(String s: majors) {
 			advancedSelector.setSelectedAttribute(advancedSelector.getOptionByValue(s), true);
 		}
-		final HtmlPage coursePage = advancedSelectorSubmit.click();
-
-		System.out.println(majors.length);
-		webClient.closeAllWindows();
+		coursePage = advancedSelectorSubmit.click();
 	}
-
 }

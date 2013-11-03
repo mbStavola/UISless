@@ -125,5 +125,6 @@
 	<classpathentry kind="lib" path="lib/websocket/websocket-common-9.0.6.v20130930.jar"/>
 	<classpathentry kind="lib" path="lib/websocket/websocket-server-9.0.6.v20130930.jar"/>
 	<classpathentry kind="lib" path="lib/websocket/websocket-servlet-9.0.6.v20130930.jar"/>
+	<classpathentry kind="lib" path="lib/hue-1.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
