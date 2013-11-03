@@ -51,9 +51,23 @@ public class Test {
 		
 		// TODO: Select every element in the selection box (which has the name "sel_subj") and submit
 		final HtmlForm subjectSelectorForm = subjectsPage.getForms().get(1);
-		final HtmlSubmitInput subjectSelectorSubmit = termSelectorForm.getInputByValue("Section Search");
-		final HtmlSelect subjectSelector = termSelectorForm.getSelectByName("sel_subj");		
-		
+		final HtmlSubmitInput subjectSelectorSubmit = subjectSelectorForm.getInputByValue("Section Search");
+		final HtmlSelect subjectSelector = subjectSelectorForm.getSelectByName("sel_subj");		
+		final String[] majors = {"ACC", "ACTV", "ACT", "ADGV", "ADS", "ADLW", "ADV", "ALSK", "ALH", "AADA", 
+				"GRA", "ANT", "ARA", "ART", "ASC", "AUD", "BANK", "HBB", "BIO", "BIT", "BUS", "BUSI", "BLW", 
+				"CANL", "CHE", "CHI", "CIVL", "CLS", "CPP", "AUST", "CSD", "COM", "CIS", "CSC", "CUS", "CSS", 
+				"CONL", "CRJ", "CJL", "CRIM", "CRM", "CFR", "DS", "DFR", "DRRS", "DNY", "DRM", "ECO", "EDU", 
+				"EDUL", "ESLS", "ESLW", "ENG", "EBS", "ERM", "ENVR", "ESP", "FAML", "FIN", "FRE", "FSA", "GENP", 
+				"GEO", "GER", "MGD", "GOV", "HHS", "HLTH", "HSA", "HCI", "HIN", "HIS", "HCS", "HON", "HMT", "HSC", 
+				"INDR", "IPP", "ICS", "INPR", "IEP", "INTL", "IB", "ICP", "ICM", "INSL", "ITA", "JPN", "JOU", "KOR", 
+				"LABR", "LAC", "LLT", "LAT", "LAW", "LETH", "LGMT", "LRWR", "LES", "LEIC", "MLS", "LIS", "LIN", 
+				"MMLM", "MGT", "MKT", "MTH", "MCM", "MSC", "GRM", "MUS", "NET", "PAS", "PHS", "PHM", "PHR", "PHI", 
+				"PHO", "PHY", "PSC", "POR", "PROP", "PSY", "MPH", "PRL", "RAD", "RCT", "RMI", "RUS", "SCI", "SEC", 
+				"SOC", "SPA", "SPE", "SPG", "SPM", "SFPR", "TAX", "TAXL", "TVF", "TLC", "THE", "THEO", "TORT", "TOX", 
+				"TNLP", "ESTA", "USLS"};
+		for(String s: majors) {
+			subjectSelector.setSelectedAttribute(subjectSelector.getOptionByText(s), true);
+		}
 		final HtmlPage coursePage = subjectSelectorSubmit.click();
 
 		System.out.println("hi");
