@@ -51,8 +51,8 @@ public class Test {
 		
 		//Moves to the advanced search page
 		final HtmlForm subjectSelectorForm = subjectPage.getForms().get(1);
-		final HtmlSubmitInput SelectorSubmit = subjectSelectorForm.getInputByValue("Advanced Search");
-		final HtmlPage advancedPage = termSelectorSubmit.click();
+		final HtmlSubmitInput subjectSelectorSubmit = subjectSelectorForm.getInputByValue("Advanced Search");
+		final HtmlPage advancedPage = subjectSelectorSubmit.click();
 
 		//Select every element in the selection box (which has the name "sel_subj") and submit
 		final HtmlForm advancedSelectorForm = advancedPage.getForms().get(1);
