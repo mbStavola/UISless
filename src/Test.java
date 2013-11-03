@@ -1,6 +1,6 @@
 import java.io.IOException;
 import java.net.MalformedURLException;
-
+import javax.swing.JOptionPane;
 import com.gargoylesoftware.htmlunit.BrowserVersion;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.WebClient;
@@ -32,8 +32,9 @@ public class Test {
 		final HtmlPasswordInput userid = form.getInputByName("sid");
 		final HtmlPasswordInput password = form.getInputByName("PIN");
 		// Log into UIS
-		userid.setValueAttribute("X02311516");
-		password.setValueAttribute("314159");
+		
+		userid.setValueAttribute(JOptionPane.showInputDialog("Enter your X Number"));
+		password.setValueAttribute(JOptionPane.showInputDialog("Enter your PIN"));
 		
 		// Submits the username and password, and then brings you to the "look up classes" page
 		final HtmlPage page1 = submitButton.click();
