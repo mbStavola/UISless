@@ -1,16 +1,13 @@
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.util.Arrays;
 import java.util.List;
 
 import javax.swing.JOptionPane;
-
-import be.roam.hue.doj.Doj;
+import javax.swing.UIManager;
 
 import com.gargoylesoftware.htmlunit.BrowserVersion;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.WebClient;
-import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.html.HtmlPasswordInput;
@@ -24,6 +21,7 @@ public class CourseScraper {
 
 	/**
 	 * @author Kevin Most
+	 * @author Matthew Stavola
 	 * @throws IOException 
 	 * @throws MalformedURLException 
 	 * @throws FailingHttpStatusCodeException 
@@ -32,7 +30,6 @@ public class CourseScraper {
 	
 	private final WebClient webClient = new WebClient(BrowserVersion.FIREFOX_17); // The entire webclient
 	private HtmlPage coursePage; // The page that lists every single course and its free seats, professor, date/time, etc.
-	private Doj coursePageDoj = Doj.on(coursePage); // Doj allows us to traverse the DOM in the coursePage
 	
 	// START SINGLETON
 	private static CourseScraper instance;
@@ -49,6 +46,7 @@ public class CourseScraper {
 	
 	
 	public static void main(String[] args) throws Exception {
+		UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		getCourseScraper().openCoursePage(); // Get to the page we actually need
 		
 		
@@ -56,6 +54,7 @@ public class CourseScraper {
 		final HtmlTable coursePageTable = (HtmlTable) getCourseScraper().coursePage.getByXPath("//table[@class='datadisplaytable']").get(0);
 		List<HtmlTableRow> coursePageTableRows = coursePageTable.getRows();
 		
+		// TODO: Create "List<Course> courses", where each Course object is one individual course from UIS
 		
 		// Pull the 21st to 31st rows from that list, and then pull the first 6 columns of those rows (just as an example)
 		for (int i = 20; i < 30; i++) {
