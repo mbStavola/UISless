@@ -49,7 +49,7 @@ public class Test {
 		termSelector.setSelectedAttribute(termSelector.getOptionByText("Spring 2014"), true);
 		final HtmlPage subjectsPage = termSelectorSubmit.click();
 		
-		// TODO: Select every element in the selection box (which has the name "sel_subj") and submit
+		//Select every element in the selection box (which has the name "sel_subj") and submit
 		final HtmlForm subjectSelectorForm = subjectsPage.getForms().get(1);
 		final HtmlSubmitInput subjectSelectorSubmit = subjectSelectorForm.getInputByValue("Section Search");
 		final HtmlSelect subjectSelector = subjectSelectorForm.getSelectByName("sel_subj");		
