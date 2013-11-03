@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JOptionPane;
@@ -30,6 +31,7 @@ public class CourseScraper {
 	
 	private final WebClient webClient = new WebClient(BrowserVersion.FIREFOX_17); // The entire webclient
 	private HtmlPage coursePage; // The page that lists every single course and its free seats, professor, date/time, etc.
+	private List<Course> courses = new ArrayList<Course>();
 	
 	// START SINGLETON
 	private static CourseScraper instance;
@@ -54,15 +56,9 @@ public class CourseScraper {
 		final HtmlTable coursePageTable = (HtmlTable) getCourseScraper().coursePage.getByXPath("//table[@class='datadisplaytable']").get(0);
 		List<HtmlTableRow> coursePageTableRows = coursePageTable.getRows();
 		
-		// TODO: Create "List<Course> courses", where each Course object is one individual course from UIS
-		
-		// Pull the 21st to 31st rows from that list, and then pull the first 6 columns of those rows (just as an example)
-		for (int i = 20; i < 30; i++) {
-			for (int j = 0; j < 15; j++) {
-				System.out.print(coursePageTableRows.get(i).getCell(j).getTextContent());
-				System.out.print("\t");
-			}
-			System.out.println();
+		// TODO: Get each cell and store it into its corresponding field in the Course object
+		for (HtmlTableRow row : coursePageTableRows) {
+			
 		}
 		
 		getCourseScraper().webClient.closeAllWindows();

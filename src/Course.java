@@ -5,6 +5,7 @@ public class Course {
 	 * @author Matthew Stavola
 	 * @dateCreated Nov 3, 2013
 	 */
+	private boolean isOpen;
 	private int crn;
 	private String subject;
 	private int courseNumber;
@@ -26,6 +27,14 @@ public class Course {
 	private int waitlistRemaining;
 	
 	private String instructor;
+
+	public boolean isOpen() {
+		return isOpen;
+	}
+
+	public void setOpen(boolean isOpen) {
+		this.isOpen = isOpen;
+	}
 
 	public int getCrn() {
 		return crn;
