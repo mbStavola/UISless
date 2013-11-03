@@ -71,7 +71,7 @@ public class Test {
 				"SOC", "SPA", "SPE", "SPG", "SPM", "SFPR", "TAX", "TAXL", "TVF", "TLC", "THE", "THEO", "TORT", "TOX", 
 				"TNLP", "ESTA", "USLS"};
 		for(String s: majors) {
-			advancedSelector.setSelectedAttribute(advancedSelector.getOptionByText(s), true);
+			advancedSelector.setSelectedAttribute(advancedSelector.getOptionByValue(s), true);
 		}
 		final HtmlPage coursePage = advancedSelectorSubmit.click();
 
