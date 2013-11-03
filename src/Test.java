@@ -51,8 +51,11 @@ public class Test {
 		
 		// TODO: Select every element in the selection box (which has the name "sel_subj") and submit
 		final HtmlForm subjectSelectorForm = subjectsPage.getForms().get(1);
-		 
+		final HtmlSubmitInput subjectSelectorSubmit = termSelectorForm.getInputByValue("Section Search");
+		final HtmlSelect subjectSelector = termSelectorForm.getSelectByName("sel_subj");		
 		
+		final HtmlPage coursePage = subjectSelectorSubmit.click();
+
 		System.out.println("hi");
 		webClient.closeAllWindows();
 	}
