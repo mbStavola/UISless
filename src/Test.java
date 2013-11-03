@@ -47,12 +47,17 @@ public class Test {
 		final HtmlSubmitInput termSelectorSubmit = termSelectorForm.getInputByValue("Submit");
 		final HtmlSelect termSelector = termSelectorForm.getSelectByName("p_term");
 		termSelector.setSelectedAttribute(termSelector.getOptionByText("Spring 2014"), true);
-		final HtmlPage subjectsPage = termSelectorSubmit.click();
+		final HtmlPage subjectPage = termSelectorSubmit.click();
 		
+		//Moves to the advanced search page
+		final HtmlForm subjectSelectorForm = subjectPage.getForms().get(1);
+		final HtmlSubmitInput SelectorSubmit = subjectSelectorForm.getInputByValue("Advanced Search");
+		final HtmlPage advancedPage = termSelectorSubmit.click();
+
 		//Select every element in the selection box (which has the name "sel_subj") and submit
-		final HtmlForm subjectSelectorForm = subjectsPage.getForms().get(1);
-		final HtmlSubmitInput subjectSelectorSubmit = subjectSelectorForm.getInputByValue("Section Search");
-		final HtmlSelect subjectSelector = subjectSelectorForm.getSelectByName("sel_subj");		
+		final HtmlForm advancedSelectorForm = advancedPage.getForms().get(1);
+		final HtmlSubmitInput advancedSelectorSubmit = advancedSelectorForm.getInputByValue("Section Search");
+		final HtmlSelect advancedSelector = advancedSelectorForm.getSelectByName("sel_subj");		
 		final String[] majors = {"ACC", "ACTV", "ACT", "ADGV", "ADS", "ADLW", "ADV", "ALSK", "ALH", "AADA", 
 				"GRA", "ANT", "ARA", "ART", "ASC", "AUD", "BANK", "HBB", "BIO", "BIT", "BUS", "BUSI", "BLW", 
 				"CANL", "CHE", "CHI", "CIVL", "CLS", "CPP", "AUST", "CSD", "COM", "CIS", "CSC", "CUS", "CSS", 
@@ -66,11 +71,11 @@ public class Test {
 				"SOC", "SPA", "SPE", "SPG", "SPM", "SFPR", "TAX", "TAXL", "TVF", "TLC", "THE", "THEO", "TORT", "TOX", 
 				"TNLP", "ESTA", "USLS"};
 		for(String s: majors) {
-			subjectSelector.setSelectedAttribute(subjectSelector.getOptionByText(s), true);
+			advancedSelector.setSelectedAttribute(advancedSelector.getOptionByText(s), true);
 		}
-		final HtmlPage coursePage = subjectSelectorSubmit.click();
+		final HtmlPage coursePage = advancedSelectorSubmit.click();
 
-		System.out.println("hi");
+		System.out.println(majors.length);
 		webClient.closeAllWindows();
 	}
 
