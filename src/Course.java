@@ -6,13 +6,13 @@ public class Course {
 	 * @dateCreated Nov 3, 2013
 	 */
 	private boolean isOpen;
-	private int crn;
+	private String crn;
 	private String subject;
-	private int courseNumber;
+	private String courseNumber;
 	
-	private int section;
+	private String section;
 	private char campus;
-	private int credits;
+	private String credits;
 	
 	private String title;
 	
@@ -22,9 +22,9 @@ public class Course {
 	private String startDate; // Format as yyyymmdd
 	private String endDate;
 	
-	private int seatsRemaining;
-	private int waitlistActual;
-	private int waitlistRemaining;
+	private String seatsRemaining;
+	private String waitlistActual;
+	private String waitlistRemaining;
 	
 	private String instructor;
 
@@ -36,11 +36,11 @@ public class Course {
 		this.isOpen = isOpen;
 	}
 
-	public int getCrn() {
+	public String getCrn() {
 		return crn;
 	}
 
-	public void setCrn(int crn) {
+	public void setCrn(String crn) {
 		this.crn = crn;
 	}
 
@@ -52,19 +52,19 @@ public class Course {
 		this.subject = subject;
 	}
 
-	public int getCourseNumber() {
+	public String getCourseNumber() {
 		return courseNumber;
 	}
 
-	public void setCourseNumber(int courseNumber) {
+	public void setCourseNumber(String courseNumber) {
 		this.courseNumber = courseNumber;
 	}
 
-	public int getSection() {
+	public String getSection() {
 		return section;
 	}
 
-	public void setSection(int section) {
+	public void setSection(String section) {
 		this.section = section;
 	}
 
@@ -76,11 +76,11 @@ public class Course {
 		this.campus = campus;
 	}
 
-	public int getCredits() {
+	public String getCredits() {
 		return credits;
 	}
 
-	public void setCredits(int credits) {
+	public void setCredits(String credits) {
 		this.credits = credits;
 	}
 
@@ -132,27 +132,27 @@ public class Course {
 		this.endDate = endDate;
 	}
 
-	public int getSeatsRemaining() {
+	public String getSeatsRemaining() {
 		return seatsRemaining;
 	}
 
-	public void setSeatsRemaining(int seatsRemaining) {
+	public void setSeatsRemaining(String seatsRemaining) {
 		this.seatsRemaining = seatsRemaining;
 	}
 
-	public int getWaitlistActual() {
+	public String getWaitlistActual() {
 		return waitlistActual;
 	}
 
-	public void setWaitlistActual(int waitlistActual) {
+	public void setWaitlistActual(String waitlistActual) {
 		this.waitlistActual = waitlistActual;
 	}
 
-	public int getWaitlistRemaining() {
+	public String getWaitlistRemaining() {
 		return waitlistRemaining;
 	}
 
-	public void setWaitlistRemaining(int waitlistRemaining) {
+	public void setWaitlistRemaining(String waitlistRemaining) {
 		this.waitlistRemaining = waitlistRemaining;
 	}
 
@@ -163,6 +163,4 @@ public class Course {
 	public void setInstructor(String instructor) {
 		this.instructor = instructor;
 	}
-
-
 }

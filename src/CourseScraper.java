@@ -1,3 +1,4 @@
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
@@ -10,6 +11,7 @@ import com.gargoylesoftware.htmlunit.BrowserVersion;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
+import com.gargoylesoftware.htmlunit.html.HtmlOption;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.html.HtmlPasswordInput;
 import com.gargoylesoftware.htmlunit.html.HtmlSelect;
@@ -32,6 +34,7 @@ public class CourseScraper {
 	private final WebClient webClient = new WebClient(BrowserVersion.FIREFOX_17); // The entire webclient
 	private HtmlPage coursePage; // The page that lists every single course and its free seats, professor, date/time, etc.
 	private List<Course> courses = new ArrayList<Course>();
+	private FileWriter csvWriter;
 	
 	// START SINGLETON
 	private static CourseScraper instance;
@@ -48,7 +51,8 @@ public class CourseScraper {
 	
 	
 	public static void main(String[] args) throws Exception {
-		UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); // Make Swing less ugly
+		getCourseScraper().csvWriter = new FileWriter("csvout.csv"); // Writes CSV to file "csvout.csv"
 		getCourseScraper().openCoursePage(); // Get to the page we actually need
 		
 		
@@ -56,10 +60,45 @@ public class CourseScraper {
 		final HtmlTable coursePageTable = (HtmlTable) getCourseScraper().coursePage.getByXPath("//table[@class='datadisplaytable']").get(0);
 		List<HtmlTableRow> coursePageTableRows = coursePageTable.getRows();
 		
-		// TODO: Get each cell and store it into its corresponding field in the Course object
-		for (HtmlTableRow row : coursePageTableRows) {
-			
+		for (int i = 0; i < coursePageTableRows.size(); i++) {
+			if (coursePageTableRows.get(i).getCells().size() > 10 && !coursePageTableRows.get(i).getCell(0).getTextContent().equals("Select")) { // Only do this row if it has more than 10 columns and if the first column is not "Select"
+				for (int j = 0; j < 15; j++) {
+					if (j == 0) { // Stuff for "isOpen" cell
+						System.out.print(coursePageTableRows.get(i).getCell(j).getTextContent().equals("add to worksheet"));
+					}
+					else if (j == 6) { // Stuff for "credits" cell
+						if (coursePageTableRows.get(i).getCell(j).getTextContent().indexOf('-') == -1) { // Checks if the credits field is not a range...
+							System.out.print(coursePageTableRows.get(i).getCell(j).getTextContent());
+						}
+						else {
+							System.out.print(coursePageTableRows.get(i).getCell(j).getTextContent().replaceAll("-", "~"));
+						}
+						
+					}
+					else if (j == 9) { // Stuff for "starTime" and "endTime" cells
+						if (coursePageTableRows.get(i).getCell(j).getTextContent().length() > 10) {
+							System.out.print(coursePageTableRows.get(i).getCell(j).getTextContent().substring(0,8));
+							System.out.print("~");
+							System.out.print(coursePageTableRows.get(i).getCell(j).getTextContent().substring(9, 16));
+						}
+						else {
+							System.out.print(coursePageTableRows.get(i).getCell(j).getTextContent());
+						}
+					}
+					else if (j == 14) {
+						System.out.print(coursePageTableRows.get(i).getCell(j).getTextContent().substring(0, 5));
+						System.out.print("~");
+						System.out.print(coursePageTableRows.get(i).getCell(j).getTextContent().substring(6, 11));
+					}
+					else {
+						System.out.print(coursePageTableRows.get(i).getCell(j).getTextContent());
+					}
+					System.out.print("\t");
+				}
+			System.out.println();
+			}
 		}
+		
 		
 		getCourseScraper().webClient.closeAllWindows();
 	}
@@ -98,21 +137,10 @@ public class CourseScraper {
 		//Select every element in the selection box (which has the name "sel_subj") and submit
 		final HtmlForm advancedSelectorForm = advancedPage.getForms().get(1);
 		final HtmlSubmitInput advancedSelectorSubmit = advancedSelectorForm.getInputByValue("Section Search");
-		final HtmlSelect advancedSelector = advancedSelectorForm.getSelectByName("sel_subj");		
-		final String[] majors = {"ACC", "ACTV", "ACT", "ADGV", "ADS", "ADLW", "ADV", "ALSK", "ALH", "AADA", 
-				"GRA", "ANT", "ARA", "ART", "ASC", "AUD", "BANK", "HBB", "BIO", "BIT", "BUS", "BUSI", "BLW", 
-				"CANL", "CHE", "CHI", "CIVL", "CLS", "CPP", "AUST", "CSD", "COM", "CIS", "CSC", "CUS", "CSS", 
-				"CONL", "CRJ", "CJL", "CRIM", "CRM", "CFR", "DS", "DFR", "DRRS", "DNY", "DRM", "ECO", "EDU", 
-				"EDUL", "ESLS", "ESLW", "ENG", "EBS", "ERM", "ENVR", "ESP", "FAML", "FIN", "FRE", "FSA", "GENP", 
-				"GEO", "GER", "MGD", "GOV", "HHS", "HLTH", "HSA", "HCI", "HIN", "HIS", "HCS", "HON", "HMT", "HSC", 
-				"INDR", "IPP", "ICS", "INPR", "IEP", "INTL", "IB", "ICP", "ICM", "INSL", "ITA", "JPN", "JOU", "KOR", 
-				"LABR", "LAC", "LLT", "LAT", "LAW", "LETH", "LGMT", "LRWR", "LES", "LEIC", "MLS", "LIS", "LIN", 
-				"MMLM", "MGT", "MKT", "MTH", "MCM", "MSC", "GRM", "MUS", "NET", "PAS", "PHS", "PHM", "PHR", "PHI", 
-				"PHO", "PHY", "PSC", "POR", "PROP", "PSY", "MPH", "PRL", "RAD", "RCT", "RMI", "RUS", "SCI", "SEC", 
-				"SOC", "SPA", "SPE", "SPG", "SPM", "SFPR", "TAX", "TAXL", "TVF", "TLC", "THE", "THEO", "TORT", "TOX", 
-				"TNLP", "ESTA", "USLS"};
-		for(String s: majors) {
-			advancedSelector.setSelectedAttribute(advancedSelector.getOptionByValue(s), true);
+		final HtmlSelect advancedSelector = advancedSelectorForm.getSelectByName("sel_subj");
+		final List<HtmlOption> majors = advancedSelector.getOptions();
+		for(HtmlOption option: majors) {
+			advancedSelector.setSelectedAttribute(option, true);
 		}
 		coursePage = advancedSelectorSubmit.click();
 	}
