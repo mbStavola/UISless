@@ -33,6 +33,7 @@ public class CourseScraper {
 	 */
 	
 	private final WebClient webClient = new WebClient(BrowserVersion.FIREFOX_17); // The entire webclient
+	private final WebClient individualWebClient = new WebClient(BrowserVersion.FIREFOX_17);
 	private HtmlPage coursePage; // The page that lists every single course and its free seats, professor, date/time, etc.
 	private List<HtmlTableRow> coursePageTableRows; 
 	
@@ -54,6 +55,8 @@ public class CourseScraper {
 	
 	
 	public static void main(String[] args) throws Exception {
+		getCourseScraper().webClient.setJavaScriptTimeout(0);
+		getCourseScraper().individualWebClient.setJavaScriptTimeout(0);
 		UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); // Make Swing less ugly
 		getCourseScraper().csvWriter = new FileWriter("csvout.csv"); // Writes CSV to file "csvout.csv"
 		getCourseScraper().csvWriter.append("sep=|\n" +
@@ -126,12 +129,12 @@ public class CourseScraper {
 		coursePageTableRows = ((HtmlTable)(getCourseScraper().coursePage.getByXPath("//table[@class='datadisplaytable']").get(0))).getRows();
 	}
 	public void addContentOnMainCoursePageToCsv() throws IndexOutOfBoundsException, IOException {
-		for (int i = 0; i < 100; i++) { // TODO: Make the program NOT run out of memory when going through the entire table; currently only goes through first 50 rows
+		for (int i = 0; i < coursePageTableRows.size(); i++) {
 			int colspanJump = 0; // The amount of columns that were "jumped" because UIS sucks and uses colspans
 			if (coursePageTableRows.get(i).getCell(0).getTextContent().equals("SR") || coursePageTableRows.get(i).getCell(0).getTextContent().equals("C") || coursePageTableRows.get(i).getCell(0).getTextContent().trim().equals("add to worksheet")) { // Only do this row if it is an actual class
 				for (int j = 0; j < 15; j++) {
 					if (j+colspanJump == 0) { // Stuff for "isOpen" cell
-						csvWriter.append(Boolean.toString(coursePageTableRows.get(i).getCell(j).getTextContent().trim().equals("SR")));
+						csvWriter.append(Boolean.toString(coursePageTableRows.get(i).getCell(0).getTextContent().equals("SR") || coursePageTableRows.get(i).getCell(0).getTextContent().equals("C") || coursePageTableRows.get(i).getCell(0).getTextContent().trim().equals("add to worksheet")));
 					}
 					else if (j+colspanJump == 1) { // Stuff for "CRN" cell
 						addContentOnIndividualCoursePageToCSV((HtmlAnchor) coursePageTableRows.get(i).getCell(j).getElementsByTagName("a").get(0)); // Also clicks the CSV's link so we can get the dates, times, and locations of the class
@@ -162,12 +165,13 @@ public class CourseScraper {
 				}
 			csvWriter.append("\n");
 			}
+		System.out.println("Parsed row: " + i);
 		}
 		csvWriter.flush();
 		csvWriter.close();
 	}
 	public void addContentOnIndividualCoursePageToCSV(HtmlAnchor linkToIndividualCoursePage) throws IOException { // Appends the days, times, locations, and dates for a course
-		HtmlPage individualCoursePage = linkToIndividualCoursePage.click();
+		HtmlPage individualCoursePage = individualWebClient.getPage("https://apollo.stjohns.edu" + linkToIndividualCoursePage.getHrefAttribute());
 		List<HtmlTableRow> individualCoursePageRows = ((HtmlTable)(individualCoursePage.getByXPath("//table[@class='datadisplaytable']").get(1))).getRows(); // Each element is a row in the HTML table
 		
 		StringBuilder[] appendToCsv = new StringBuilder[4]; // Each element will be appended to the CSV later
@@ -190,5 +194,6 @@ public class CourseScraper {
 			csvWriter.append(appendToCsv[i].toString());
 			csvWriter.append(csvDelimiter);
 		}
+		individualWebClient.closeAllWindows();
 	}
 }
