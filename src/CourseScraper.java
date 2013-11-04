@@ -34,7 +34,6 @@ public class CourseScraper {
 	
 	private final WebClient webClient = new WebClient(BrowserVersion.FIREFOX_17); // The entire webclient
 	private HtmlPage coursePage; // The page that lists every single course and its free seats, professor, date/time, etc.
-	private HtmlPage individualCoursePage; // The individual course page.
 	private List<HtmlTableRow> coursePageTableRows; 
 	
 	private FileWriter csvWriter;
@@ -168,7 +167,7 @@ public class CourseScraper {
 		csvWriter.close();
 	}
 	public void addContentOnIndividualCoursePageToCSV(HtmlAnchor linkToIndividualCoursePage) throws IOException { // Appends the days, times, locations, and dates for a course
-		individualCoursePage = linkToIndividualCoursePage.click();
+		HtmlPage individualCoursePage = linkToIndividualCoursePage.click();
 		List<HtmlTableRow> individualCoursePageRows = ((HtmlTable)(individualCoursePage.getByXPath("//table[@class='datadisplaytable']").get(1))).getRows(); // Each element is a row in the HTML table
 		
 		StringBuilder[] appendToCsv = new StringBuilder[4]; // Each element will be appended to the CSV later
@@ -185,7 +184,9 @@ public class CourseScraper {
 			}
 		}
 		for (int i = 0; i < appendToCsv.length; i++) {
-			appendToCsv[i].deleteCharAt(0); // Remove the first '~'
+			if (appendToCsv[i].toString().length() > 0) {
+				appendToCsv[i].deleteCharAt(0); // Remove the first '~'
+			}
 			csvWriter.append(appendToCsv[i].toString());
 			csvWriter.append(csvDelimiter);
 		}
