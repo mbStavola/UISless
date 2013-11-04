@@ -1,14 +1,10 @@
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JOptionPane;
 import javax.swing.UIManager;
-import javax.swing.text.DateFormatter;
 
 import com.gargoylesoftware.htmlunit.BrowserVersion;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
@@ -63,6 +59,10 @@ public class CourseScraper {
 		getCourseScraper().csvWriter = new FileWriter("csvout.csv"); // Writes CSV to file "csvout.csv"
 		getCourseScraper().csvWriter.append("sep=|\n" +
 				"Open?|" +
+				"Time|" +
+				"Days of Week|" +
+				"Location|" +
+				"Dates|" +
 				"CRN|" +
 				"Subject|" +
 				"Course #|" +
@@ -70,13 +70,10 @@ public class CourseScraper {
 				"Campus|" +
 				"Credits|" +
 				"Course Title|" +
-				"Days|" +
-				"Time|" +
 				"Seats Remaining|" +
 				"Waitlist Actual|" +
 				"Waitlist Remaining|" +
-				"Instructor(s)|" +
-				"Dates|\n"); // Appends the "sep=|" parameter so Excel knows that we're using the pipe for delimiting, and appends the heading information
+				"Instructor(s)|\n"); // Appends the "sep=|" parameter so Excel knows that we're using the pipe for delimiting, and appends the heading information
 		
 		getCourseScraper().pullCoursePageTableRows(); // Get the information we need from UIS and put it into a List called coursePageTableRows. This info is still raw and needs to be parsed
 		getCourseScraper().addContentOnMainCoursePageToCsv(); // Parses the horribly-formatted data that UIS gave us
@@ -130,7 +127,7 @@ public class CourseScraper {
 		coursePageTableRows = ((HtmlTable)(getCourseScraper().coursePage.getByXPath("//table[@class='datadisplaytable']").get(0))).getRows();
 	}
 	public void addContentOnMainCoursePageToCsv() throws IndexOutOfBoundsException, IOException {
-		for (int i = 0; i < 50; i++) {
+		for (int i = 0; i < 100; i++) { // TODO: Make the program NOT run out of memory when going through the entire table; currently only goes through first 50 rows
 			int colspanJump = 0; // The amount of columns that were "jumped" because UIS sucks and uses colspans
 			if (coursePageTableRows.get(i).getCell(0).getTextContent().equals("SR") || coursePageTableRows.get(i).getCell(0).getTextContent().equals("C") || coursePageTableRows.get(i).getCell(0).getTextContent().trim().equals("add to worksheet")) { // Only do this row if it is an actual class
 				for (int j = 0; j < 15; j++) {
@@ -156,7 +153,9 @@ public class CourseScraper {
 					else {
 						csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent());
 					}
-					csvWriter.append(csvDelimiter);
+					if (j+colspanJump != 8 && j + colspanJump != 9 && j+colspanJump != 14) {
+						csvWriter.append(csvDelimiter);
+					}
 					
 					if (!coursePageTableRows.get(i).getCell(j).getAttribute("colspan").equals(DomElement.ATTRIBUTE_NOT_DEFINED)) { // If a column's colspan is specified...
 						colspanJump += Integer.parseInt(coursePageTableRows.get(i).getCell(j).getAttribute("colspan")) - 1; // ... we should jump ahead by (colspan - 1);
@@ -168,9 +167,9 @@ public class CourseScraper {
 		csvWriter.flush();
 		csvWriter.close();
 	}
-	public void addContentOnIndividualCoursePageToCSV(HtmlAnchor linkToIndividualCoursePage) throws IOException { // TODO: SHIT DON'T WORK AT ALL
+	public void addContentOnIndividualCoursePageToCSV(HtmlAnchor linkToIndividualCoursePage) throws IOException { // Appends the days, times, locations, and dates for a course
 		individualCoursePage = linkToIndividualCoursePage.click();
-		List<HtmlTableRow> individualCoursePageRows = ((HtmlTable)(individualCoursePage.getByXPath("//table[@class='datadisplaytable']").get(0))).getRows(); // Each element is a row in the HTML table
+		List<HtmlTableRow> individualCoursePageRows = ((HtmlTable)(individualCoursePage.getByXPath("//table[@class='datadisplaytable']").get(1))).getRows(); // Each element is a row in the HTML table
 		
 		StringBuilder[] appendToCsv = new StringBuilder[4]; // Each element will be appended to the CSV later
 		for (int i = 0; i < appendToCsv.length; i++) {
@@ -180,13 +179,15 @@ public class CourseScraper {
 		for (int i = 0; i < individualCoursePageRows.size(); i++) { // We don't need "colspanJump" here because unlike on the other page, blank values actually get their own column instead of becoming part of the previous column
 			if (individualCoursePageRows.get(i).getCells().size() > 5 && !individualCoursePageRows.get(i).getCell(0).getTextContent().equals("Type")) { // Only do this row if it has more than 6  columns and if the first column is not "Type"
 				for (int j = 1; j < 5; j++) {
-					appendToCsv[j].append('~');
-					appendToCsv[j].append(individualCoursePageRows.get(i).getCell(j).getTextContent());
+					appendToCsv[j-1].append('~');
+					appendToCsv[j-1].append(individualCoursePageRows.get(i).getCell(j).getTextContent());
 				}
 			}
 		}
 		for (int i = 0; i < appendToCsv.length; i++) {
-			System.out.println(appendToCsv[i].toString());
+			appendToCsv[i].deleteCharAt(0); // Remove the first '~'
+			csvWriter.append(appendToCsv[i].toString());
+			csvWriter.append(csvDelimiter);
 		}
 	}
 }
