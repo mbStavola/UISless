@@ -137,7 +137,7 @@ public class CourseScraper {
 			if (coursePageTableRows.get(i).getCell(0).getTextContent().equals("SR") || coursePageTableRows.get(i).getCell(0).getTextContent().equals("C") || coursePageTableRows.get(i).getCell(0).getTextContent().trim().equals("add to worksheet")) { // Only do this row if it is an actual class
 				for (int j = 0; j < 15; j++) {
 					if (j+colspanJump == 0) { // Stuff for "isOpen" cell
-						csvWriter.append(Boolean.toString(coursePageTableRows.get(i).getCell(0).getTextContent().equals("SR") || coursePageTableRows.get(i).getCell(0).getTextContent().equals("C") || coursePageTableRows.get(i).getCell(0).getTextContent().trim().equals("add to worksheet")));
+						csvWriter.append(Boolean.toString(!coursePageTableRows.get(i).getCell(0).getTextContent().equals("C")));
 					}
 					else if (j+colspanJump == 1) { // Stuff for "CRN" cell
 						addContentOnIndividualCoursePageToCSV((HtmlAnchor) coursePageTableRows.get(i).getCell(j).getElementsByTagName("a").get(0)); // Also clicks the CSV's link so we can get the dates, times, and locations of the class
@@ -168,7 +168,7 @@ public class CourseScraper {
 				}
 			csvWriter.append("\n");
 			}
-		System.out.println("Parsed row: " + i + "/" + coursePageTableRows.size());
+		System.out.println("Parsed row: " + i + "/" + (coursePageTableRows.size()-1));
 		}
 		csvWriter.flush();
 		csvWriter.close();
