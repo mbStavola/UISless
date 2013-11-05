@@ -34,7 +34,6 @@ public class CourseScraper {
 	
 	private final WebClient webClient = new WebClient(BrowserVersion.FIREFOX_17); // The entire webclient
 	private final WebClient individualWebClient = new WebClient(BrowserVersion.FIREFOX_17);
-	private HtmlPage coursePage; // The page that lists every single course and its free seats, professor, date/time, etc.
 	private List<HtmlTableRow> coursePageTableRows; 
 	
 	private FileWriter csvWriter;
@@ -59,6 +58,7 @@ public class CourseScraper {
 		getCourseScraper().individualWebClient.setJavaScriptTimeout(0);
 		UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); // Make Swing less ugly
 		getCourseScraper().csvWriter = new FileWriter("csvout.csv"); // Writes CSV to file "csvout.csv"
+		// TODO: No more hardcoded headers for CSV
 		getCourseScraper().csvWriter.append("sep=|\n" +
 				"Open?|" +
 				"Time|" +
@@ -77,7 +77,8 @@ public class CourseScraper {
 				"Waitlist Remaining|" +
 				"Instructor(s)|\n"); // Appends the "sep=|" parameter so Excel knows that we're using the pipe for delimiting, and appends the heading information
 		
-		getCourseScraper().pullCoursePageTableRows(); // Get the information we need from UIS and put it into a List called coursePageTableRows. This info is still raw and needs to be parsed
+		// TODO: These method names suck
+		getCourseScraper().getCoursePageTableRows(); // Get the information we need from UIS and put it into a List called coursePageTableRows. This info is still raw and needs to be parsed
 		getCourseScraper().addContentOnMainCoursePageToCsv(); // Parses the horribly-formatted data that UIS gave us
 
 		
@@ -86,7 +87,7 @@ public class CourseScraper {
 	}
 
 	
-	public void pullCoursePageTableRows() throws FailingHttpStatusCodeException, MalformedURLException, IOException {
+	public void getCoursePageTableRows() throws FailingHttpStatusCodeException, MalformedURLException, IOException {
 		// Get the login form, and then gets the submit button, user ID, and password fields from the form
 		final HtmlPage loginPage = webClient.getPage("http://apollo.stjohns.edu");
 		final HtmlForm form = loginPage.getFormByName("loginform");
@@ -99,36 +100,38 @@ public class CourseScraper {
 		password.setValueAttribute(JOptionPane.showInputDialog("Enter your PIN"));
 		
 		// Submits the username and password, and then brings you to the "look up classes" page
-		final HtmlPage page1 = submitButton.click();
-		final HtmlPage studentPage = page1.getAnchorByText("Student").click();
-		final HtmlPage registrationPage = studentPage.getAnchorByText("Registration").click();
-		final HtmlPage lookupClassesPage = registrationPage.getAnchorByText("Look-up Classes to Add").click();
+		HtmlPage lookupCoursesPage = submitButton.click();
+		lookupCoursesPage = lookupCoursesPage.getAnchorByText("Student").click();
+		lookupCoursesPage = lookupCoursesPage.getAnchorByText("Registration").click();
+		lookupCoursesPage = lookupCoursesPage.getAnchorByText("Look-up Classes to Add").click();
 		
 		// Gets the term-selector form, its submit button, and the term selector box, sets the term to "Spring 2014", and submits
-		final HtmlForm termSelectorForm = lookupClassesPage.getForms().get(1);
+		final HtmlForm termSelectorForm = lookupCoursesPage.getForms().get(1);
 		final HtmlSubmitInput termSelectorSubmit = termSelectorForm.getInputByValue("Submit");
 		final HtmlSelect termSelector = termSelectorForm.getSelectByName("p_term");
 		termSelector.setSelectedAttribute(termSelector.getOptionByText("Spring 2014"), true);
-		final HtmlPage subjectPage = termSelectorSubmit.click();
+		lookupCoursesPage = termSelectorSubmit.click();
 		
 		//Moves to the advanced search page
-		final HtmlForm subjectSelectorForm = subjectPage.getForms().get(1);
+		final HtmlForm subjectSelectorForm = lookupCoursesPage.getForms().get(1);
 		final HtmlSubmitInput subjectSelectorSubmit = subjectSelectorForm.getInputByValue("Advanced Search");
-		final HtmlPage advancedPage = subjectSelectorSubmit.click();
+		lookupCoursesPage = subjectSelectorSubmit.click();
 
 		//Select every element in the selection box (which has the name "sel_subj") and submit
-		final HtmlForm advancedSelectorForm = advancedPage.getForms().get(1);
+		final HtmlForm advancedSelectorForm = lookupCoursesPage.getForms().get(1);
 		final HtmlSubmitInput advancedSelectorSubmit = advancedSelectorForm.getInputByValue("Section Search");
 		final HtmlSelect advancedSelector = advancedSelectorForm.getSelectByName("sel_subj");
 		final List<HtmlOption> majors = advancedSelector.getOptions();
 		for(HtmlOption option: majors) {
 			advancedSelector.setSelectedAttribute(option, true);
 		}
-		coursePage = advancedSelectorSubmit.click();
+		lookupCoursesPage = advancedSelectorSubmit.click();
 		
-		coursePageTableRows = ((HtmlTable)(getCourseScraper().coursePage.getByXPath("//table[@class='datadisplaytable']").get(0))).getRows();
+		coursePageTableRows = ((HtmlTable)(lookupCoursesPage.getByXPath("//table[@class='datadisplaytable']").get(0))).getRows();
 	}
 	public void addContentOnMainCoursePageToCsv() throws IndexOutOfBoundsException, IOException {
+		
+		// TODO: You know what we have to do here
 		for (int i = 0; i < coursePageTableRows.size(); i++) {
 			int colspanJump = 0; // The amount of columns that were "jumped" because UIS sucks and uses colspans
 			if (coursePageTableRows.get(i).getCell(0).getTextContent().equals("SR") || coursePageTableRows.get(i).getCell(0).getTextContent().equals("C") || coursePageTableRows.get(i).getCell(0).getTextContent().trim().equals("add to worksheet")) { // Only do this row if it is an actual class
@@ -165,7 +168,7 @@ public class CourseScraper {
 				}
 			csvWriter.append("\n");
 			}
-		System.out.println("Parsed row: " + i);
+		System.out.println("Parsed row: " + i + "/" + coursePageTableRows.size());
 		}
 		csvWriter.flush();
 		csvWriter.close();
@@ -179,6 +182,7 @@ public class CourseScraper {
 			appendToCsv[i] = new StringBuilder();
 		}
 		
+		// TODO: Same as above, this is all hardcoded stuff and we need to fix it
 		for (int i = 0; i < individualCoursePageRows.size(); i++) { // We don't need "colspanJump" here because unlike on the other page, blank values actually get their own column instead of becoming part of the previous column
 			if (individualCoursePageRows.get(i).getCells().size() > 5 && !individualCoursePageRows.get(i).getCell(0).getTextContent().equals("Type")) { // Only do this row if it has more than 6  columns and if the first column is not "Type"
 				for (int j = 1; j < 5; j++) {
