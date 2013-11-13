@@ -1,6 +1,9 @@
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.sql.DriverManager;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 
 import javax.swing.JOptionPane;
@@ -21,6 +24,7 @@ import com.gargoylesoftware.htmlunit.html.HtmlTable;
 import com.gargoylesoftware.htmlunit.html.HtmlTableRow;
 
 
+
 public class CourseScraper {
 
 	/**
@@ -38,6 +42,26 @@ public class CourseScraper {
 	
 	private FileWriter csvWriter;
 	private final char csvDelimiter = '|';
+	
+	private Connection db;
+	private final String dbTableHeaders = "\"Open\"	Boolean, " +
+			"\"Start Time\"	time without time zone[], " +
+			"\"End Time\"	time without time zone[], " +
+			"\"Days of Week\"	character(6)[], " +
+			"\"Location\"	character(80)[], " +
+			"\"Start Date\"	date[], " +
+			"\"End Date\"	date[], " +
+			"\"CRN\"	integer	primary key	not null, " +
+			"\"Subject\"	character(5), " +
+			"\"Course #\"	character(10), " +
+			"\"Section\"	character(5), " +
+			"\"Campus\"	character(1), " +
+			"\"Credits\"	character(10)[], " +
+			"\"Course Title\"	character(80), " +
+			"\"Seats Remaining\"	integer, " +
+			"\"Waitlist Actual\"	integer, " +
+			"\"Waitlist Remaining\"	integer, " +
+			"\"Instructor(s)\"	character(100)[]";
 	
 	// START SINGLETON
 	private static CourseScraper instance;
@@ -57,36 +81,24 @@ public class CourseScraper {
 		getCourseScraper().webClient.setJavaScriptTimeout(0);
 		getCourseScraper().individualWebClient.setJavaScriptTimeout(0);
 		UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); // Make Swing less ugly
-		getCourseScraper().csvWriter = new FileWriter("csvout.csv"); // Writes CSV to file "csvout.csv"
-		// TODO: No more hardcoded headers for CSV
-		getCourseScraper().csvWriter.append("sep=|\n" +
-				"Open?|" +
-				"Time|" +
-				"Days of Week|" +
-				"Location|" +
-				"Dates|" +
-				"CRN|" +
-				"Subject|" +
-				"Course #|" +
-				"Section|" +
-				"Campus|" +
-				"Credits|" +
-				"Course Title|" +
-				"Seats Remaining|" +
-				"Waitlist Actual|" +
-				"Waitlist Remaining|" +
-				"Instructor(s)|\n"); // Appends the "sep=|" parameter so Excel knows that we're using the pipe for delimiting, and appends the heading information
 		
-		// TODO: These method names suck
+
 		getCourseScraper().getCoursePageTableRows(); // Get the information we need from UIS and put it into a List called coursePageTableRows. This info is still raw and needs to be parsed
 		getCourseScraper().addContentOnMainCoursePageToCsv(); // Parses the horribly-formatted data that UIS gave us
-
+//		getCourseScraper().databaseThings();
 		
 		
 		getCourseScraper().webClient.closeAllWindows(); // SHUT. DOWN. EVERYTHING.
 	}
 
-	
+	public void databaseThings() throws SQLException, ClassNotFoundException {
+		Class.forName("org.postgresql.Driver");
+		getCourseScraper().db = DriverManager.getConnection("jdbc:postgresql://kevinmost.no-ip.org:5432/UISless", JOptionPane.showInputDialog("Enter Postgres username"), JOptionPane.showInputDialog("Enter Postgres password"));
+		db.createStatement().executeUpdate("CREATE TABLE \"UISless\" (" + dbTableHeaders + ")");
+		db.close();
+		System.out.println("Done");
+		
+	}
 	public void getCoursePageTableRows() throws FailingHttpStatusCodeException, MalformedURLException, IOException {
 		// Get the login form, and then gets the submit button, user ID, and password fields from the form
 		final HtmlPage loginPage = webClient.getPage("http://apollo.stjohns.edu");
@@ -130,34 +142,55 @@ public class CourseScraper {
 		coursePageTableRows = ((HtmlTable)(lookupCoursesPage.getByXPath("//table[@class='datadisplaytable']").get(0))).getRows();
 	}
 	public void addContentOnMainCoursePageToCsv() throws IndexOutOfBoundsException, IOException {
-		
-		// TODO: You know what we have to do here
-		for (int i = 0; i < coursePageTableRows.size(); i++) {
+		for (int i = 0; i < coursePageTableRows.size(); i++) { // For each row...
 			int colspanJump = 0; // The amount of columns that were "jumped" because UIS sucks and uses colspans
-			if (coursePageTableRows.get(i).getCell(0).getTextContent().equals("SR") || coursePageTableRows.get(i).getCell(0).getTextContent().equals("C") || coursePageTableRows.get(i).getCell(0).getTextContent().trim().equals("add to worksheet")) { // Only do this row if it is an actual class
-				for (int j = 0; j < 15; j++) {
-					if (j+colspanJump == 0) { // Stuff for "isOpen" cell
-						csvWriter.append(Boolean.toString(! (coursePageTableRows.get(i).getCell(0).getTextContent().equals("C") || coursePageTableRows.get(i).getCell(0).getTextContent().equals("NR")) ));
-					}
-					else if (j+colspanJump == 1) { // Stuff for "CRN" cell
-						addContentOnIndividualCoursePageToCSV((HtmlAnchor) coursePageTableRows.get(i).getCell(j).getElementsByTagName("a").get(0)); // Also clicks the CSV's link so we can get the dates, times, and locations of the class
-						csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent());
-					}
-					else if (j+colspanJump == 6) { // Stuff for "credits" cell
-						if (coursePageTableRows.get(i).getCell(j).getTextContent().indexOf('-') == -1) { // Checks if the credits field is not a range...
+			if (coursePageTableRows.get(i).getCell(0).getTextContent().equals("SR") || coursePageTableRows.get(i).getCell(0).getTextContent().equals("NR") ||coursePageTableRows.get(i).getCell(0).getTextContent().equals("C") || coursePageTableRows.get(i).getCell(0).getTextContent().trim().equals("add to worksheet")) { // Only do this row if it is an actual class
+				for (int j = 0; j < 15; j++) { // For each column...
+					switch (j+colspanJump) { // j+colspanJump is the field that we're currently on in the UIS HTML table
+						case 0: // Checkbox field
+							// TODO: This line always throws an exception at parsing row 2, no matter what I put in it. Even if it's just a simple println
+							System.out.println("wow can you not");
+							break;
+						case 1: // CRN field
+							addContentOnIndividualCoursePageToCSV((HtmlAnchor) coursePageTableRows.get(i).getCell(j).getElementsByTagName("a").get(0)); // Also clicks the CSV's link so we can get the dates, times, and locations of the class
 							csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent());
-						}
-						else {
+							break;
+						case 6: // Credits field
 							csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent().replaceAll("-", "~"));
-						}
+							break;
+						case 8: case 9: case 14: // Days, time, and instructor (skip these fields, done in individual course page)
+							break;
+						default:
+							csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent());
+							break;
 					}
-					else if (j+colspanJump == 7) { // Stuff for "title" cells
-						csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent().replaceAll("(P)", ""));
-					}
-					else if (j+colspanJump == 8 || j+colspanJump == 9 || j+colspanJump == 14) {} // Don't do anything with the time, date, and day columns; those will be addressed in the individual course page
-					else {
-						csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent());
-					}
+					
+					// TODO: REMOVE THIS SHIT ONCE SWITCHES WORK
+//					if (j+colspanJump == 0) { // Stuff for "isOpen" cell
+//						csvWriter.append(Boolean.toString(! (coursePageTableRows.get(i).getCell(0).getTextContent().equals("C") || coursePageTableRows.get(i).getCell(0).getTextContent().equals("NR")) ));
+//					}
+//					else if (j+colspanJump == 1) { // Stuff for "CRN" cell
+//						addContentOnIndividualCoursePageToCSV((HtmlAnchor) coursePageTableRows.get(i).getCell(j).getElementsByTagName("a").get(0)); // Also clicks the CSV's link so we can get the dates, times, and locations of the class
+//						csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent());
+//					}
+//					else if (j+colspanJump == 6) { // Stuff for "credits" cell
+//						if (coursePageTableRows.get(i).getCell(j).getTextContent().indexOf('-') == -1) { // Checks if the credits field is not a range...
+//							csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent());
+//						}
+//						else {
+//							csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent().replaceAll("-", "~"));
+//						}
+//					}
+//					else if (j+colspanJump == 7) { // Stuff for "title" cells
+//						csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent().replaceAll("(P)", ""));
+//					}
+//					else if (j+colspanJump == 8 || j+colspanJump == 9 || j+colspanJump == 14) {} // Don't do anything with the time, date, and day columns; those will be addressed in the individual course page
+//					else {
+//						csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent());
+//					}
+					// END REMOVE THIS SHIT
+					
+					
 					if (j+colspanJump != 8 && j + colspanJump != 9 && j+colspanJump != 14) {
 						csvWriter.append(csvDelimiter);
 					}
@@ -167,6 +200,7 @@ public class CourseScraper {
 					}
 				}
 			csvWriter.append("\n");
+			
 			}
 		System.out.println("Parsed row: " + i + "/" + (coursePageTableRows.size()-1));
 		}

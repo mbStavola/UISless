@@ -126,5 +126,6 @@
 	<classpathentry kind="lib" path="lib/websocket/websocket-server-9.0.6.v20130930.jar"/>
 	<classpathentry kind="lib" path="lib/websocket/websocket-servlet-9.0.6.v20130930.jar"/>
 	<classpathentry kind="lib" path="lib/hue-1.1.jar"/>
+	<classpathentry kind="lib" path="lib/postgresql-9.3-1100.jdbc41.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
