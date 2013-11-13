@@ -78,8 +78,6 @@ public class CourseScraper {
 	
 	
 	public static void main(String[] args) throws Exception {
-		getCourseScraper().webClient.setJavaScriptTimeout(0);
-		getCourseScraper().individualWebClient.setJavaScriptTimeout(0);
 		UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); // Make Swing less ugly
 		
 
@@ -88,6 +86,8 @@ public class CourseScraper {
 //		getCourseScraper().databaseThings();
 		
 		
+		getCourseScraper().csvWriter.flush();
+		getCourseScraper().csvWriter.close();
 		getCourseScraper().webClient.closeAllWindows(); // SHUT. DOWN. EVERYTHING.
 	}
 
@@ -100,6 +100,10 @@ public class CourseScraper {
 		
 	}
 	public void getCoursePageTableRows() throws FailingHttpStatusCodeException, MalformedURLException, IOException {
+		// Ensure that timeouts don't happen
+		webClient.setJavaScriptTimeout(0);
+		individualWebClient.setJavaScriptTimeout(0);
+		
 		// Get the login form, and then gets the submit button, user ID, and password fields from the form
 		final HtmlPage loginPage = webClient.getPage("http://apollo.stjohns.edu");
 		final HtmlForm form = loginPage.getFormByName("loginform");
@@ -142,56 +146,28 @@ public class CourseScraper {
 		coursePageTableRows = ((HtmlTable)(lookupCoursesPage.getByXPath("//table[@class='datadisplaytable']").get(0))).getRows();
 	}
 	public void addContentOnMainCoursePageToCsv() throws IndexOutOfBoundsException, IOException {
-		getCourseScraper().csvWriter = new FileWriter("csvout.csv");
+		csvWriter = new FileWriter("csvout.csv");
 		for (int i = 0; i < coursePageTableRows.size(); i++) { // For each row...
 			int colspanJump = 0; // The amount of columns that were "jumped" because UIS sucks and uses colspans
 			if (coursePageTableRows.get(i).getCell(0).getTextContent().equals("SR") || coursePageTableRows.get(i).getCell(0).getTextContent().equals("NR") ||coursePageTableRows.get(i).getCell(0).getTextContent().equals("C") || coursePageTableRows.get(i).getCell(0).getTextContent().trim().equals("add to worksheet")) { // Only do this row if it is an actual class
 				for (int j = 0; j < 15; j++) { // For each column...
-					kevinMost: switch (j+colspanJump) { // j+colspanJump is the field that we're currently on in the UIS HTML table
+					switch (j+colspanJump) { // j+colspanJump is the field that we're currently on in the UIS HTML table
 						case 0: // Checkbox field
-							// TODO: This line always throws an exception at parsing row 2, no matter what I put in it. Even if it's just a simple println
-							System.out.println("wow can you not");
-							break kevinMost;
+							csvWriter.append(Boolean.toString(! (coursePageTableRows.get(i).getCell(0).getTextContent().equals("C") || coursePageTableRows.get(i).getCell(0).getTextContent().equals("NR")) ));
+							break;
 						case 1: // CRN field
 							addContentOnIndividualCoursePageToCSV((HtmlAnchor) coursePageTableRows.get(i).getCell(j).getElementsByTagName("a").get(0)); // Also clicks the CSV's link so we can get the dates, times, and locations of the class
 							csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent());
-							break kevinMost;
+							break;
 						case 6: // Credits field
 							csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent().replaceAll("-", "~"));
-							break kevinMost;
+							break;
 						case 8: case 9: case 14: // Days, time, and instructor (skip these fields, done in individual course page)
-							break kevinMost;
+							break;
 						default:
 							csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent());
-							break kevinMost;
+							break;
 					}
-					
-					// TODO: REMOVE THIS SHIT ONCE SWITCHES WORK
-//					if (j+colspanJump == 0) { // Stuff for "isOpen" cell
-//						csvWriter.append(Boolean.toString(! (coursePageTableRows.get(i).getCell(0).getTextContent().equals("C") || coursePageTableRows.get(i).getCell(0).getTextContent().equals("NR")) ));
-//					}
-//					else if (j+colspanJump == 1) { // Stuff for "CRN" cell
-//						addContentOnIndividualCoursePageToCSV((HtmlAnchor) coursePageTableRows.get(i).getCell(j).getElementsByTagName("a").get(0)); // Also clicks the CSV's link so we can get the dates, times, and locations of the class
-//						csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent());
-//					}
-//					else if (j+colspanJump == 6) { // Stuff for "credits" cell
-//						if (coursePageTableRows.get(i).getCell(j).getTextContent().indexOf('-') == -1) { // Checks if the credits field is not a range...
-//							csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent());
-//						}
-//						else {
-//							csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent().replaceAll("-", "~"));
-//						}
-//					}
-//					else if (j+colspanJump == 7) { // Stuff for "title" cells
-//						csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent().replaceAll("(P)", ""));
-//					}
-//					else if (j+colspanJump == 8 || j+colspanJump == 9 || j+colspanJump == 14) {} // Don't do anything with the time, date, and day columns; those will be addressed in the individual course page
-//					else {
-//						csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent());
-//					}
-					// END REMOVE THIS SHIT
-					
-					
 					if (j+colspanJump != 8 && j + colspanJump != 9 && j+colspanJump != 14) {
 						csvWriter.append(csvDelimiter);
 					}
@@ -205,27 +181,29 @@ public class CourseScraper {
 			}
 		System.out.println("Parsed row: " + i + "/" + (coursePageTableRows.size()-1));
 		}
-		csvWriter.flush();
-		csvWriter.close();
 	}
 	public void addContentOnIndividualCoursePageToCSV(HtmlAnchor linkToIndividualCoursePage) throws IOException { // Appends the days, times, locations, and dates for a course
 		HtmlPage individualCoursePage = individualWebClient.getPage("https://apollo.stjohns.edu" + linkToIndividualCoursePage.getHrefAttribute());
 		List<HtmlTableRow> individualCoursePageRows = ((HtmlTable)(individualCoursePage.getByXPath("//table[@class='datadisplaytable']").get(1))).getRows(); // Each element is a row in the HTML table
 		
-		StringBuilder[] appendToCsv = new StringBuilder[4]; // Each element will be appended to the CSV later
+		// Create an array of elements to add to the DB
+		StringBuilder[] appendToCsv = new StringBuilder[4];
 		for (int i = 0; i < appendToCsv.length; i++) {
 			appendToCsv[i] = new StringBuilder();
 		}
 		
-		// TODO: Same as above, this is all hardcoded stuff and we need to fix it
-		for (int i = 0; i < individualCoursePageRows.size(); i++) { // We don't need "colspanJump" here because unlike on the other page, blank values actually get their own column instead of becoming part of the previous column
+		// Store each element into the array
+		// If there are multiple rows, separate them with a '~' character, but keep them within the same element in the array
+		for (int i = 0; i < individualCoursePageRows.size(); i++) {
 			if (individualCoursePageRows.get(i).getCells().size() > 5 && !individualCoursePageRows.get(i).getCell(0).getTextContent().equals("Type")) { // Only do this row if it has more than 6  columns and if the first column is not "Type"
-				for (int j = 1; j < 5; j++) {
-					appendToCsv[j-1].append('~');
-					appendToCsv[j-1].append(individualCoursePageRows.get(i).getCell(j).getTextContent());
+				for (int j = 0; j < appendToCsv.length; j++) {
+					appendToCsv[j].append('~');
+					appendToCsv[j].append(individualCoursePageRows.get(i).getCell(j+1).getTextContent());
 				}
 			}
 		}
+		
+		// Take the array and write it out to the database
 		for (int i = 0; i < appendToCsv.length; i++) {
 			if (appendToCsv[i].toString().length() > 0) {
 				appendToCsv[i].deleteCharAt(0); // Remove the first '~'
@@ -233,6 +211,6 @@ public class CourseScraper {
 			csvWriter.append(appendToCsv[i].toString());
 			csvWriter.append(csvDelimiter);
 		}
-		individualWebClient.closeAllWindows();
+		individualWebClient.closeAllWindows(); // Close the window to avoid using huge amounts of memory
 	}
 }
