@@ -142,27 +142,28 @@ public class CourseScraper {
 		coursePageTableRows = ((HtmlTable)(lookupCoursesPage.getByXPath("//table[@class='datadisplaytable']").get(0))).getRows();
 	}
 	public void addContentOnMainCoursePageToCsv() throws IndexOutOfBoundsException, IOException {
+		getCourseScraper().csvWriter = new FileWriter("csvout.csv");
 		for (int i = 0; i < coursePageTableRows.size(); i++) { // For each row...
 			int colspanJump = 0; // The amount of columns that were "jumped" because UIS sucks and uses colspans
 			if (coursePageTableRows.get(i).getCell(0).getTextContent().equals("SR") || coursePageTableRows.get(i).getCell(0).getTextContent().equals("NR") ||coursePageTableRows.get(i).getCell(0).getTextContent().equals("C") || coursePageTableRows.get(i).getCell(0).getTextContent().trim().equals("add to worksheet")) { // Only do this row if it is an actual class
 				for (int j = 0; j < 15; j++) { // For each column...
-					switch (j+colspanJump) { // j+colspanJump is the field that we're currently on in the UIS HTML table
+					kevinMost: switch (j+colspanJump) { // j+colspanJump is the field that we're currently on in the UIS HTML table
 						case 0: // Checkbox field
 							// TODO: This line always throws an exception at parsing row 2, no matter what I put in it. Even if it's just a simple println
 							System.out.println("wow can you not");
-							break;
+							break kevinMost;
 						case 1: // CRN field
 							addContentOnIndividualCoursePageToCSV((HtmlAnchor) coursePageTableRows.get(i).getCell(j).getElementsByTagName("a").get(0)); // Also clicks the CSV's link so we can get the dates, times, and locations of the class
 							csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent());
-							break;
+							break kevinMost;
 						case 6: // Credits field
 							csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent().replaceAll("-", "~"));
-							break;
+							break kevinMost;
 						case 8: case 9: case 14: // Days, time, and instructor (skip these fields, done in individual course page)
-							break;
+							break kevinMost;
 						default:
 							csvWriter.append(coursePageTableRows.get(i).getCell(j).getTextContent());
-							break;
+							break kevinMost;
 					}
 					
 					// TODO: REMOVE THIS SHIT ONCE SWITCHES WORK
