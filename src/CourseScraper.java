@@ -1,10 +1,10 @@
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.sql.DriverManager;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JOptionPane;
@@ -22,6 +22,7 @@ import com.gargoylesoftware.htmlunit.html.HtmlPasswordInput;
 import com.gargoylesoftware.htmlunit.html.HtmlSelect;
 import com.gargoylesoftware.htmlunit.html.HtmlSubmitInput;
 import com.gargoylesoftware.htmlunit.html.HtmlTable;
+import com.gargoylesoftware.htmlunit.html.HtmlTableCell;
 import com.gargoylesoftware.htmlunit.html.HtmlTableRow;
 
 
@@ -37,32 +38,13 @@ public class CourseScraper {
 	 * @dateCreated Nov 3, 2013
 	 */
 	
-	private final WebClient webClient = new WebClient(BrowserVersion.FIREFOX_17); // The entire webclient
-	private final WebClient individualWebClient = new WebClient(BrowserVersion.FIREFOX_17);
-	private List<HtmlTableRow> coursePageTableRows; 
+	private final WebClient webClient = new WebClient(BrowserVersion.FIREFOX_17); // The webclient for the main pages
+	private final WebClient individualWebClient = new WebClient(BrowserVersion.FIREFOX_17); // The webclient for the individual pages. These pages are not needed once information is parsed from them, and since there will be several thousand of these pages, we put them in a separate webclient so they can be purged after use to avoid using massive amounts of memory
+	private List<HtmlTableRow> coursePageTableRows; // Holds the courses as we parse them
 	
-	private FileWriter csvWriter;
-	private final char csvDelimiter = '|';
-	
-	private Connection db;
-	private final String dbTableHeaders = "\"Open\"	Boolean, " +
-			"\"Start Time\"	time without time zone[], " +
-			"\"End Time\"	time without time zone[], " +
-			"\"Days of Week\"	character(6)[], " +
-			"\"Location\"	character(80)[], " +
-			"\"Start Date\"	date[], " +
-			"\"End Date\"	date[], " +
-			"\"CRN\"	integer	primary key	not null, " +
-			"\"Subject\"	character(5), " +
-			"\"Course #\"	character(10), " +
-			"\"Section\"	character(5), " +
-			"\"Campus\"	character(1), " +
-			"\"Credits\"	character(10)[], " +
-			"\"Course Title\"	character(80), " +
-			"\"Seats Remaining\"	integer, " +
-			"\"Waitlist Actual\"	integer, " +
-			"\"Waitlist Remaining\"	integer, " +
-			"\"Instructor(s)\"	character(100)[]";
+	private Connection db; // Connection to our Postgres DB where the parsed courses will be added
+	PreparedStatement preparedStatement = null; // Prepared statement to be inserted into our database. Prepared Statements are fast, which makes them good for inserting the 5000 or so records this program will do.
+	private int updateStatementCounter = 1; // The index for each field we need to add to our Postgres Update Statement. Remember that these are 1-indexed!
 	
 	// START SINGLETON
 	private static CourseScraper instance;
@@ -80,33 +62,25 @@ public class CourseScraper {
 	
 	public static void main(String[] args) throws Exception {
 		UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); // Make Swing less ugly
-		
 
-		getCourseScraper().initializeCourseTableRows(); // Get the information we need from UIS and put it into a List called coursePageTableRows. This info is still raw and needs to be parsed
-		// getCourseScraper().addContentOnMainCoursePageToCsv(); // Parses the horribly-formatted data that UIS gave us
-		//getCourseScraper().openDB();
-		
-		
-		getCourseScraper().csvWriter.flush();
-		getCourseScraper().csvWriter.close();
-		getCourseScraper().db.close();
-		getCourseScraper().webClient.closeAllWindows(); // SHUT. DOWN. EVERYTHING.
-	}
-
-	public void openDB() throws SQLException, ClassNotFoundException {
+		// Open the Postgres DB (hosted by Heroku)
 		Class.forName("org.postgresql.Driver");
-		getCourseScraper().db = DriverManager.getConnection("jdbc:postgresql://kevinmost.no-ip.org:5432/UISless", JOptionPane.showInputDialog("Enter Postgres username"), JOptionPane.showInputDialog("Enter Postgres password"));
-		// db.createStatement().executeUpdate("CREATE TABLE \"UISless\" (" + dbTableHeaders + ")");
-		// db.close();
-		// System.out.println("Done");
+		getCourseScraper().db = DriverManager.getConnection("jdbc:postgresql://ec2-54-204-16-232.compute-1.amazonaws.com:5432/ddo7r9212kvngn?user=srebgebxskzafy&password=MYrb7-gZcDe85JPQF06edHHWUT&ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory");
+
+		getCourseScraper().prepareCourseUpdateStatement();
 		
+		getCourseScraper().initializeCourseTableRows(); // Get the information we need from UIS and put it into a List called coursePageTableRows. This info is still raw and needs to be parsed
+
+		getCourseScraper().addContentOnMainCoursePageToDB(); // Add the stuff from coursePageTableRows to the DB
+		
+		// SHUT. DOWN. EVERYTHING.
+		getCourseScraper().db.close();
+		getCourseScraper().webClient.closeAllWindows(); 
 	}
+
 	
 	public void prepareCourseUpdateStatement() throws SQLException {
-		String updateStatementText = "INSERT INTO UISless (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-		PreparedStatement updateStatement = db.prepareStatement(updateStatementText);
-		//TODO: Make an update statement that can be used to push thousands of courses to the DB
-		
+		preparedStatement = db.prepareStatement("INSERT INTO \"2014Spring\"(open, time, days, location, date, instructors, crn, subject, course_number, section, campus, credits, title, remaining_seats, waitlist_actual, waitlist_remaining) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
 	}
 	
 	// Saves every course as an HtmlTableRow object in the "coursePageTableRows" List
@@ -157,72 +131,104 @@ public class CourseScraper {
 		coursePageTableRows = ((HtmlTable)(lookupCoursesPage.getByXPath("//table[@class='datadisplaytable']").get(0))).getRows();
 	}
 	
-	// Takes a row and its "index" as arguments and 
-	public String parseTableRow(HtmlTableRow row, int j) {
-		switch (j) {
-			case 0: // Checkbox for open/closed class
-				return Boolean.toString(! (row.getTextContent().equals("C") || row.getTextContent().equals("NR")) );
-			case 1: // CRN
-				// TODO: Also "click" the link
-				return row.getTextContent();
-			case 6: // Number of credits
-				return row.getTextContent().replaceAll("-", "~");
-			case 8: case 9: case 14: // Days, time, and instructor
-				return "";
+	// Parses and returns one column of UIS data at a time. When used in a loop, you can parse the entire row effectively using this method.
+	public String parseMainTableRows(HtmlTableCell cell, int j) throws IOException, SQLException {
+		MainTableHeaders cellTitle = MainTableHeaders.values()[j];
+
+		switch (cellTitle) {
+			case OPEN:
+				switch (cell.getTextContent()) {
+					case "C":
+						return "Closed";
+					case "NR":
+						return "Not available for registration";
+					case "SR":
+						return "Student restrictions";
+					case "add to worksheet":
+						return "Open";
+					default:
+						return "";
+				}
+			case CRN:
+				addContentOnIndividualCoursePageToDB((HtmlAnchor)(cell.getElementsByTagName("a").get(0)));
+				return cell.getTextContent();
+			case DAYS: case TIME: case INSTRUCTOR: case DATE:
+				return null;
 			default:
-				return row.getTextContent();
+				return cell.getTextContent();
 		}
 		
 	}
 	
-	public void addContentOnMainCoursePageToCsv() throws IndexOutOfBoundsException, IOException {
-		csvWriter = new FileWriter("csvout.csv");
+	public String parseIndividualTableRows(HtmlTableCell cell, int j) throws IOException {
+		IndividualTableHeaders cellTitle = IndividualTableHeaders.values()[j];
+
+		switch (cellTitle) {
+			case TYPE: case SCHEDULE_TYPE:
+				return null;
+			default:
+				return cell.getTextContent();
+		}
+	}
+	
+	public void addContentOnMainCoursePageToDB() throws IndexOutOfBoundsException, IOException, SQLException {
 		for (int i = 0; i < coursePageTableRows.size(); i++) { // For each row...
+		// for (int i = 0; i < 5; i++) {
 			int colspanJump = 0; // The amount of columns that were "jumped" because UIS sucks and uses colspans
-			if (coursePageTableRows.get(i).getCell(0).getTextContent().equals("SR") || coursePageTableRows.get(i).getCell(0).getTextContent().equals("NR") ||coursePageTableRows.get(i).getCell(0).getTextContent().equals("C") || coursePageTableRows.get(i).getCell(0).getTextContent().trim().equals("add to worksheet")) { // Only do this row if it is an actual class
-				for (int j = 0; j < 15; j++) { // For each column...
-					
-					parseTableRow(coursePageTableRows.get(i), j+colspanJump);
-					
+			if (!parseMainTableRows(coursePageTableRows.get(i).getCell(0), 0).equals("")) { // Only do this row if it is an actual course
+				for (int j = 0; j < 13; j++) { // For each column...
+					// Parse it and add it to our prepared statement, and increment the statement's index counter
+					String parsedCell = parseMainTableRows(coursePageTableRows.get(i).getCell(j), j+colspanJump);
+					if (parsedCell != null) {
+						System.out.println(updateStatementCounter + ": " + parsedCell);
+						preparedStatement.setString(updateStatementCounter, parsedCell);
+						updateStatementCounter++;
+					}
 					if (!coursePageTableRows.get(i).getCell(j).getAttribute("colspan").equals(DomElement.ATTRIBUTE_NOT_DEFINED)) { // If a column's colspan is specified...
 						colspanJump += Integer.parseInt(coursePageTableRows.get(i).getCell(j).getAttribute("colspan")) - 1; // ... we should jump ahead by (colspan - 1);
 					}
 				}
-			csvWriter.append("\n");
-			
+			preparedStatement.executeUpdate();
+			updateStatementCounter = 1;
 			}
-		System.out.println("Parsed row: " + i + "/" + (coursePageTableRows.size()-1));
+			System.out.println("-------------- Parsed row: " + i + "/" + (coursePageTableRows.size()-1));
 		}
 	}
-	public void addContentOnIndividualCoursePageToCSV(HtmlAnchor linkToIndividualCoursePage) throws IOException { // Appends the days, times, locations, and dates for a course
+	public void addContentOnIndividualCoursePageToDB(HtmlAnchor linkToIndividualCoursePage) throws IOException, SQLException { // Appends the days, times, locations, and dates for a course
 		HtmlPage individualCoursePage = individualWebClient.getPage("https://apollo.stjohns.edu" + linkToIndividualCoursePage.getHrefAttribute());
-		List<HtmlTableRow> individualCoursePageRows = ((HtmlTable)(individualCoursePage.getByXPath("//table[@class='datadisplaytable']").get(1))).getRows(); // Each element is a row in the HTML table
-		
-		// Create an array of elements to add to the DB
-		StringBuilder[] appendToCsv = new StringBuilder[4];
-		for (int i = 0; i < appendToCsv.length; i++) {
-			appendToCsv[i] = new StringBuilder();
-		}
-		
-		// Store each element into the array
-		// If there are multiple rows, separate them with a '~' character, but keep them within the same element in the array
-		for (int i = 0; i < individualCoursePageRows.size(); i++) {
-			if (individualCoursePageRows.get(i).getCells().size() > 5 && !individualCoursePageRows.get(i).getCell(0).getTextContent().equals("Type")) { // Only do this row if it has more than 6  columns and if the first column is not "Type"
-				for (int j = 0; j < appendToCsv.length; j++) {
-					appendToCsv[j].append('~');
-					appendToCsv[j].append(individualCoursePageRows.get(i).getCell(j+1).getTextContent());
+		List<HtmlTable> coursePageTableList = (List<HtmlTable>)(individualCoursePage.getByXPath("//table[@summary='This table lists the scheduled meeting times and assigned instructors for this class..']")); 
+		if (coursePageTableList.size() > 0) {
+			List<HtmlTableRow> individualCoursePageRows = coursePageTableList.get(0).getRows(); // Each element is a row in the HTML table
+			for (int j = 0; j < 7; j++) { // For each column...
+				StringBuilder statement = new StringBuilder(); // Make a StringBuilder to hold the concatenated information we get from each row in this column
+				for (int i = 0; i < individualCoursePageRows.size(); i++) { // For each row in that column...
+					if (individualCoursePageRows.get(i).getCells().size() > 5 && !individualCoursePageRows.get(i).getCell(0).getTextContent().equals("Type")) { // Only do this row if it has more than 6  columns and if the first column is not "Type"
+						String parsedCell = parseIndividualTableRows(individualCoursePageRows.get(i).getCell(j), j);
+						
+						// Appends any data collected to our statement, as well as appending a pipe-delimiter if there is already information from previous rows in there
+						if (parsedCell != null) {
+							if (statement.length() != 0) {
+								statement.append('|');
+							}
+							statement.append(parsedCell);
+						}
+					}
+				}
+				if (statement.toString().length() > 0) {
+					
+					preparedStatement.setString(updateStatementCounter, statement.toString());
+					statement.setLength(0);
+					updateStatementCounter++;
 				}
 			}
 		}
+		else // Don't do anything instead if there is no table, but set update statment counter to the right value
+			updateStatementCounter = 7;
+			
 		
-		// Take the array and write it out to the database
-		for (int i = 0; i < appendToCsv.length; i++) {
-			if (appendToCsv[i].toString().length() > 0) {
-				appendToCsv[i].deleteCharAt(0); // Remove the first '~'
-			}
-			csvWriter.append(appendToCsv[i].toString());
-			csvWriter.append(csvDelimiter);
-		}
+		// Store each cell into the array. If there are multiple rows, they will be pipe-delimited and added to one cell in this course's database record
+	
+		
 		individualWebClient.closeAllWindows(); // Close the window to avoid using huge amounts of memory
 	}
 }
