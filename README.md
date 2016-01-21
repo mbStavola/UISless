@@ -1,17 +1,19 @@
 UISless
 =======
 
-Workaround for the awful service that is UIS
-
+Workaround for the awful service that is UIS...
+... that we never finished.
 
 How it works
 =======
-1. User provides their UIS info
+1. User provides their UIS info via a configuration json (located in resources)
 2. UISless logs them into UIS via HtmlUnit
-3. Courses are pulled from UIS and categorized based on location and time
-4. A Google map is populated with geographic and temporal information
+3. Courses are scraped and inserted into a DB
 
-  a. Users can go building by building to see what classes are being held there and when
-
-  b. Users can search a class and see where and when it meets
-5. If a PRN is provided by the user, registration may also be possible through UISless [planned]
+TODO
+=======
+- I took out the navigation to subpages when I was rewriting this, but if you want room info you need to do that
+- This is kinda tailored to Heroku, maybe make it more platform agnostic?
+- UISless is really only a course scraper right now, but the original vision was much more than that!
+- There might be some problems to iron out in general :)
+- git gud --hard
