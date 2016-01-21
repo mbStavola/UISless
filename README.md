@@ -1,8 +1,7 @@
 UISless
 =======
 
-Workaround for the awful service that is UIS...
-... that we never finished.
+Workaround for the awful service that is UIS... that we never finished.
 
 How it works
 =======

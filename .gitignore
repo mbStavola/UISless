@@ -1,5 +1,5 @@
-java/UISless/src/main/resources/sensitive_config.json
-
+src/main/resources/sensitive_config.json
+target/*
 # Created by https://www.gitignore.io/api/windows,osx,linux,eclipse,intellij,java
 
 ### Windows ###

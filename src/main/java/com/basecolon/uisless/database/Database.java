@@ -18,7 +18,7 @@ public class Database {
     private Database(DatabaseModel config, String term) {
         this.config = config;
 
-        this.term = "public." + term.replace(" ", "_").toLowerCase();
+        this.term = term.replace(" ", "_").toLowerCase();
     }
 
     public void insert(CourseModel course) {
