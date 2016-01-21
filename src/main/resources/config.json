@@ -1,0 +1,14 @@
+{
+  "db": {
+    "db_host": "",
+    "db_name": "",
+
+    "db_username": "",
+    "db_password": ""
+  },
+  "user": {
+    "x_number": "",
+    "pin": ""
+  },
+  "term": ""
+}
